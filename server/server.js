@@ -1,5 +1,5 @@
-import express from 'express'
 import 'dotenv/config'
+import express from 'express'
 
 import healthController from './controllers/health.controller.js'
 

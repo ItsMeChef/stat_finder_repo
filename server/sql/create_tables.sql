@@ -18,6 +18,14 @@ CREATE TABLE pokemon.pokemon (
 );
 SELECT * FROM pokemon.pokemon;
 
+ALTER TABLE pokemon.pokemon
+ADD COLUMN base_happiness INTEGER NOT NULL,
+ADD COLUMN capture_rate INTEGER NOT NULL,
+ADD COLUMN has_gender_differences BOOLEAN NOT NULL,
+ADD COLUMN hatch_counter INTEGER NOT NULL,
+ADD COLUMN is_baby BOOLEAN NOT NULL,
+ADD COLUMN is_legendary BOOLEAN NOT NULL;
+
 CREATE TABLE pokemon.move (
 	move_id INTEGER PRIMARY KEY,
 	name VARCHAR(20) NOT NULL UNIQUE
