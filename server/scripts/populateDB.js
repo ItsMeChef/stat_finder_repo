@@ -37,6 +37,19 @@ async function populatePokemonTypes() {
     console.log('INSERTION SUCCESSFUL! NOW COMMITING...')
 }
 
+async function populateStatTypes() {
+    const pokemon = new Pokemon(parseInt(process.env.API_DELAY) || 2000)
+
+    let isSuccessful = await pokemon.populateStatType()
+    if (!isSuccessful) {
+        console.log('INSERT TRANSACTION IS NO GOOD!\nROLLING BACK!')
+        return
+    }
+
+    console.log('INSERTION SUCCESSFUL! NOW COMMITING...')
+}
+
 // populatePokemon()
 // populateTypes()
-populatePokemonTypes()
+// populatePokemonTypes()
+populateStatTypes()
