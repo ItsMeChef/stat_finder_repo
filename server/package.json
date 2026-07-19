@@ -1,0 +1,19 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "node server for stat_finder application",
+  "repository": {
+    "type": "git",
+    "url": "stat_finder_repo"
+  },
+  "license": "ISC",
+  "author": "Justin E Jenkins",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
