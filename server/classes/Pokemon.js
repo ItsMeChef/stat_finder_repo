@@ -225,5 +225,88 @@ export default class Pokemon {
             console.log('populatePokemonTypes() Finished!')
         }
     }
+
+    async populateStatType() {
+        try {
+            const client = await pool.connect()
+
+            // NOTE: LAST THREE ELEMENTS WILL NEED TO BE HANDLED IN DATABASE DESIGN.
+            // A THEY ARE NOT ATTACHED TO A POKEMON ENTITY BUT A POKEMON INSTANCE.
+            // WILL DO IN THE FUTURE
+            const statTypes = [
+                {
+                    name: 'hp',
+                    isDefault: true
+                },
+                {
+                    name: 'attack',
+                    isDefault: true
+                },
+                {
+                    name: 'defense',
+                    isDefault: true
+                },
+                {
+                    name: 'special-attack',
+                    isDefault: true
+                },
+                {
+                    name: 'special-defense',
+                    isDefault: true
+                },
+                {
+                    name: 'speed',
+                    isDefault: true
+                },
+                {
+                    name: 'accuracy',
+                    isDefault: false                  
+                },
+                {
+                    name: 'evasion',
+                    isDefault: false
+                },
+                {
+                    name: 'special',
+                    isDefault: false
+                }
+            ]
+
+            try {
+                await client.query('BEGIN')
+                let id = 1
+                for (let i = 0; i < statTypes.length; i++) {
+                    if (statTypes[i].isDefault) {
+                        const insertQuery = {
+                            text: `
+                                INSERT INTO pokemon.stat_type
+                                VALUES ($1, $2)
+                            `,
+                            values: [id, statTypes[i].name]
+                        }             
+                        
+                        await pool.query(insertQuery)
+
+                        id++
+                    }
+                }                
+            } catch(e) {
+                await client.query('ROLLBACK')
+                console.log(`ERROR: ${e}\nROLLING BACK!!!`)
+                return false
+            } finally {
+                console.log('RELEASING CLIENT!!!')
+                client.release()
+            }
+
+            return true
+        } catch(e) {
+            console.log('Error: ', e)
+            return false
+        } finally {
+            console.log('populateStatType() Finished!\nCLOSING CONNECTION!')
+
+        }
+    }
 }
 
