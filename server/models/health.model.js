@@ -1,10 +1,21 @@
 import pool from "../config/db.js"
 
 class HealthModel {
-    async testConnection() {
-        const result = await pool.query('SELECT * FROM public.test')
+    async findConnectionTest() {
+        const selectTestQuery = `
+            SELECT *
+              FROM public.test
+        `
+        
+        try {
+            const result = await pool.query(selectTestQuery)
 
-        return result.rows[0]
+            return result.rows[0]?.test_string || null            
+        } catch(e) {
+            console.log('QUERY ERROR :(', e)
+            return null
+        }
+
     }
 }
 
