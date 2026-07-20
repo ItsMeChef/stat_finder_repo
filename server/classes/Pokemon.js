@@ -3,11 +3,12 @@ import pool from '../config/db.js'
 import LinkedList from './LinkedList.js'
 
 export default class Pokemon {
-    #pokemonCount = 0
-    #pokemonCountReal = 0
+    #pokemonCount = 0 // I realized I could have better scope handling here, will fix later...
+    #pokemonCountReal = 0 // I realized I could have better scope handling here, will fix later...
     #pokemonSpeciesLink = "https://pokeapi.co/api/v2/pokemon-species"
     #pokemonLink = "https://pokeapi.co/api/v2/pokemon"
     #pokemonTypeLink = "https://pokeapi.co/api/v2/type"
+    #pokemonMoveLink = 'https://pokeapi.co/api/v2/move'
 
     constructor(delay) {
         this.delay = delay
@@ -306,6 +307,125 @@ export default class Pokemon {
         } finally {
             console.log('populateStatType() Finished!\nCLOSING CONNECTION!')
 
+        }
+    }
+    
+    async populateMoves() {
+        let badIdStart = 10001
+        let moveIdList = []
+        const moveExceptionMap = new Map([
+            ["struggle", 165],
+            ["happy-hour", 603],
+            ["z-moves", [[622, 639]
+                       , [640, 658]
+                       , [695, 728]
+                       , [743, 826]]], // [min, max] ranges
+            ["fixBadApiId", 919]
+        ])
+
+        const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms))
+
+        try {
+            const client = await pool.connect()
+
+            try {
+                await client.query('BEGIN')
+
+                try {
+                    let moveResponseObj = await axios.get(this.#pokemonMoveLink)
+                    let count = parseInt(moveResponseObj.data.count || 0)
+                    if (count === 0) {
+                        throw new Error("COUNT IS ZERO. UNEXPECTED ERROR!")
+                    }
+                    console.log('move count retrieval success...')
+                    let moveSpecificResponseObjStr = `${this.#pokemonMoveLink}`
+                    for (let i = 1; i < count; i++) {
+                        console.log(`i:${i}\nbadIdStart:${badIdStart}`)
+                        let moveSpecificResponseObj = i <= moveExceptionMap.get("fixBadApiId") 
+                                                        ? await axios.get(moveSpecificResponseObjStr + `/${i}`)
+                                                        : await axios.get(moveSpecificResponseObjStr + `/${badIdStart}`)
+                        if (!(i <= moveExceptionMap.get("fixBadApiId"))) {
+                            badIdStart++
+                        }
+                        let data = moveSpecificResponseObj.data
+                        let learnedByPokemon = data.learned_by_pokemon.length === 0 ? false : data.learned_by_pokemon // LIST
+
+                        if (!learnedByPokemon) {
+                            let errCount = 0
+                            let zMovesList = moveExceptionMap.get('z-moves') // [[], []]
+                            for (let j = 0; j < zMovesList.length; j++) {
+                                if (!(i >= zMovesList[j][0] && i <= zMovesList[j][1])) {
+                                    errCount++
+                                }
+                            }
+                            if (!moveExceptionMap.has(data.name)) {
+                                errCount++
+                            }
+
+                            if (errCount === 2) {
+                                throw new Error("learned_by_pokemon list from response is empty! OR not in exception range!")                                
+                            }
+                        }
+
+                        moveIdList.push({
+                            move_id: i,
+                            name: data.name,
+                            power: data.power,
+                            pp: data.pp,
+                            priority: data.priority,
+                            learned_by_pokemon: learnedByPokemon || []
+                        })
+
+                        let moveIdPrintValue = i <= moveExceptionMap.get("fixBadApiId") ? moveIdList[i - 1].move_id : badIdStart
+                        console.log(`move_id[${moveIdPrintValue}] inserted into LIST from AXIOS`)
+
+                        await delay(this.delay)
+                    }
+                } catch(e) {
+                    console.error('axios error: ', e)
+                    return false
+                } 
+
+
+                let count = parseInt(moveIdList.length || 0)
+                if (count === 0) {
+                    throw new Error("COUNT IS ZERO. UNEXPECTED ERROR!")
+                }
+                for (let i = 1; i < count + 1; i++) {
+                    const insertMovesQuery = {
+                        text: `
+                            INSERT INTO POKEMON.MOVE (move_id, name, power, pp, priority) 
+                            VALUES ($1, $2, $3, $4, $5)
+                        `,
+                        values: [i
+                               , moveIdList[i - 1].name
+                               , moveIdList[i - 1].power
+                               , moveIdList[i - 1].pp
+                               , moveIdList[i - 1].priority
+                                ]
+                    }
+                    await client.query(insertMovesQuery)
+
+                    console.log(`move_id[${moveIdList[i - 1].move_id}] inserted into into DB!`)
+                }
+
+                console.log('INSERTION SUCCESS!\nCOMMITTING...')
+                await client.query('COMMIT')
+
+                return true
+            } catch(e) {
+                console.error(e)
+                await client.query('ROLLBACK')
+                return false
+            } finally {
+                console.log('CONNECTION RELEASED!')
+                client.release()
+            }
+        } catch(e) {
+            console.error('Connection to client error...', e)
+            return false
+        } finally {
+            console.log('populateMoves() Finished!\nCLOSING CONNECTION!')
         }
     }
 }
